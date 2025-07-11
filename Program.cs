@@ -53,25 +53,14 @@ IEnumerable<(int, string)> readParamdexFile(string path)
     }
 }
 
-foreach (var dir in Directory.GetDirectories(Path.Join(args[1], "src/Smithbox.Data/Assets/PARAM")))
+void syncParamNames(string smithboxFile)
 {
-    var smithboxFile = Path.Join(dir, "Community Row Names.json");
-    if (!File.Exists(smithboxFile))
-    {
-        Console.Error.WriteLine($"{smithboxFile} does not exist, not copying.");
-        continue;
-    }
-
+    var gameCode = Path.GetFileName(Path.GetDirectoryName(smithboxFile));
     var smithboxStore = JsonSerializer.Deserialize<RowNameStore>(File.ReadAllText(smithboxFile))!;
 
     foreach (var smithboxParams in smithboxStore.Params)
     {
-        var paramdexFile = Path.Join(
-            args[2],
-            Path.GetFileName(dir),
-            "Names",
-            smithboxParams.Name + ".txt"
-        );
+        var paramdexFile = Path.Join(args[2], gameCode, "Names", smithboxParams.Name + ".txt");
         Queue<(int, string)> paramdexParams = File.Exists(paramdexFile)
             ? new(readParamdexFile(paramdexFile))
             : [];
@@ -107,6 +96,40 @@ foreach (var dir in Directory.GetDirectories(Path.Join(args[1], "src/Smithbox.Da
                 paramdexFile,
                 String.Join("", outputParams.Select(tuple => $"{tuple.Item1} {tuple.Item2}\n"))
             );
+        }
+    }
+}
+
+foreach (var dir in Directory.GetDirectories(Path.Join(args[1], "src/Smithbox.Data/Assets/PARAM")))
+{
+    var smithboxFile = Path.Join(dir, "Community Row Names.json");
+    if (!File.Exists(smithboxFile))
+    {
+        Console.Error.WriteLine($"{smithboxFile} does not exist, not copying.");
+    }
+    else
+    {
+        syncParamNames(smithboxFile);
+    }
+
+    var defsDir = Path.Join(dir, "Defs");
+    var tdfsDir = Path.Join(dir, "Tdfs");
+    foreach (
+        var file in (Directory.Exists(defsDir) ? Directory.GetFiles(defsDir) : []).Concat(
+            (Directory.Exists(tdfsDir) ? Directory.GetFiles(tdfsDir) : [])
+        )
+    )
+    {
+        var paramdexFile = Path.Join(
+            args[2],
+            Path.GetFileName(dir),
+            "Defs",
+            Path.GetFileName(file)
+        );
+        if (!File.Exists(paramdexFile))
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(paramdexFile)!);
+            File.Copy(file, paramdexFile, overwrite: true);
         }
     }
 
