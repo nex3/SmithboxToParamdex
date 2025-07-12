@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Xml;
 
 if (args.Count() != 3)
 {
@@ -115,22 +116,41 @@ foreach (var dir in Directory.GetDirectories(Path.Join(args[1], "src/Smithbox.Da
     var defsDir = Path.Join(dir, "Defs");
     var tdfsDir = Path.Join(dir, "Tdfs");
     foreach (
-        var file in (Directory.Exists(defsDir) ? Directory.GetFiles(defsDir) : []).Concat(
-            (Directory.Exists(tdfsDir) ? Directory.GetFiles(tdfsDir) : [])
+        var file in (Directory.Exists(defsDir) ? Directory.GetFiles(defsDir, "*.xml") : []).Concat(
+            (Directory.Exists(tdfsDir) ? Directory.GetFiles(tdfsDir, "*.tdf") : [])
         )
     )
     {
+        string? paramType = null;
+        if (file.EndsWith(".xml"))
+        {
+            var doc = new XmlDocument() { PreserveWhitespace = true };
+            doc.Load(file);
+            if (doc.SelectSingleNode("//ParamType") is { } paramTypeNode)
+            {
+                paramType = paramTypeNode.InnerText;
+            }
+        }
+
         var paramdexFile = Path.Join(
             args[2],
             Path.GetFileName(dir),
             Path.GetFileName(Path.GetDirectoryName(file)),
             Path.GetFileName(file)
         );
-        if (!File.Exists(paramdexFile))
+        if (
+            File.Exists(paramdexFile)
+            || (
+                paramType != null
+                && File.Exists(Path.Join(Path.GetDirectoryName(paramdexFile), $"{paramType}.xml"))
+            )
+        )
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(paramdexFile)!);
-            File.Copy(file, paramdexFile, overwrite: true);
+            continue;
         }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(paramdexFile)!);
+        File.Copy(file, paramdexFile);
     }
 
     Console.WriteLine(dir);
