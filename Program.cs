@@ -101,6 +101,13 @@ void syncParamNames(string smithboxFile)
     }
 }
 
+void changeNodeName(XmlNode node, string newName)
+{
+    var newNode = ((XmlDocument)node.OwnerDocument!).CreateNode(node.NodeType, newName, null);
+    newNode.InnerXml = node.InnerXml;
+    node.ParentNode!.ReplaceChild(newNode, node);
+}
+
 foreach (var dir in Directory.GetDirectories(Path.Join(args[1], "src/Smithbox.Data/Assets/PARAM")))
 {
     var smithboxFile = Path.Join(dir, "Community Row Names.json");
@@ -122,13 +129,24 @@ foreach (var dir in Directory.GetDirectories(Path.Join(args[1], "src/Smithbox.Da
     )
     {
         string? paramType = null;
+        XmlDocument? doc = null;
         if (file.EndsWith(".xml"))
         {
-            var doc = new XmlDocument() { PreserveWhitespace = true };
+            doc = new XmlDocument() { PreserveWhitespace = true };
             doc.Load(file);
             if (doc.SelectSingleNode("//ParamType") is { } paramTypeNode)
             {
                 paramType = paramTypeNode.InnerText;
+            }
+
+            if (doc.SelectSingleNode("//Unk06") is { } dataVersionNode)
+            {
+                changeNodeName(dataVersionNode, "DataVersion");
+            }
+
+            if (doc.SelectSingleNode("//Version") is { } formatVersionNode)
+            {
+                changeNodeName(formatVersionNode, "FormatVersion");
             }
         }
 
@@ -150,7 +168,14 @@ foreach (var dir in Directory.GetDirectories(Path.Join(args[1], "src/Smithbox.Da
         }
 
         Directory.CreateDirectory(Path.GetDirectoryName(paramdexFile)!);
-        File.Copy(file, paramdexFile);
+        if (doc is not null)
+        {
+            File.WriteAllText(paramdexFile, doc.OuterXml);
+        }
+        else
+        {
+            File.Copy(file, paramdexFile);
+        }
     }
 
     Console.WriteLine(dir);
