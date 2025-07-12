@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Xml;
 
 if (args.Count() != 3)
@@ -54,6 +55,8 @@ IEnumerable<(int, string)> readParamdexFile(string path)
     }
 }
 
+var jpNameRegex = new Regex(@"(?:^.* -- )?(.*[\u3000-\u30ff\uff00-\uffef\u4e00-\u9faf])");
+
 void syncParamNames(string smithboxFile)
 {
     var gameCode = Path.GetFileName(Path.GetDirectoryName(smithboxFile));
@@ -66,6 +69,7 @@ void syncParamNames(string smithboxFile)
             ? new(readParamdexFile(paramdexFile))
             : [];
         Queue<(int, string)> outputParams = [];
+        Queue<(int, string)> jpOutputParams = [];
 
         foreach (var entry in smithboxParams.Entries)
         {
@@ -83,6 +87,19 @@ void syncParamNames(string smithboxFile)
             if (entry.Name != "")
             {
                 outputParams.Enqueue((entry.ID, entry.Name));
+
+                if (paramdexName is not null)
+                {
+                    var match = jpNameRegex.Match(paramdexName);
+                    if (match.Success)
+                    {
+                        var jpParamdexName = match.Groups[1].Value;
+                        if (!entry.Name.Contains(jpParamdexName))
+                        {
+                            jpOutputParams.Enqueue(((int)paramdexID!, jpParamdexName));
+                        }
+                    }
+                }
             }
             else if (paramdexID is not null && paramdexName is not null && paramdexID == entry.ID)
             {
@@ -97,6 +114,23 @@ void syncParamNames(string smithboxFile)
                 paramdexFile,
                 String.Join("", outputParams.Select(tuple => $"{tuple.Item1} {tuple.Item2}\n"))
             );
+
+            if (jpOutputParams.Count > 0)
+            {
+                var jpParamdexFile = Path.Join(
+                    Path.GetDirectoryName(paramdexFile),
+                    "jp",
+                    Path.GetFileName(paramdexFile)
+                );
+                Directory.CreateDirectory(Path.GetDirectoryName(jpParamdexFile)!);
+                File.WriteAllText(
+                    jpParamdexFile,
+                    String.Join(
+                        "",
+                        jpOutputParams.Select(tuple => $"{tuple.Item1} {tuple.Item2}\n")
+                    )
+                );
+            }
         }
     }
 }
