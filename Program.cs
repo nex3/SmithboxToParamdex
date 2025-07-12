@@ -123,7 +123,7 @@ foreach (var dir in Directory.GetDirectories(Path.Join(args[1], "src/Smithbox.Da
         var paramdexFile = Path.Join(
             args[2],
             Path.GetFileName(dir),
-            "Defs",
+            Path.GetFileName(Path.GetDirectoryName(file)),
             Path.GetFileName(file)
         );
         if (!File.Exists(paramdexFile))
