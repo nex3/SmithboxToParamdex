@@ -41,6 +41,11 @@ class Game
             ? JsonSerializer.Deserialize<RowNameStore>(File.ReadAllText(smithboxFile))!
             : new() { Params = [] };
         smithboxByName = smithboxStore.Params.ToDictionary(param => param.Name, param => param);
+
+        if (!File.Exists(smithboxFile) && !Directory.Exists(paramdexPath))
+        {
+            throw new Exception($"Neither source has a game named {name}");
+        }
     }
 
     public IEnumerable<Param> Params()
