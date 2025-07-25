@@ -1,15 +1,18 @@
 ﻿/// <summary>
 /// Full information for row name stripping
 /// </summary>
-public class RowNameStore
+internal sealed class RowNameStore
 {
+    /// <summary>
+    /// The list of params
+    /// </summary>
     public required List<RowNameParam> Params { get; set; }
 }
 
 /// <summary>
 /// Full information for row name stripping
 /// </summary>
-public class RowNameParam
+internal sealed class RowNameParam
 {
     /// <summary>
     /// The name of the param
@@ -25,7 +28,7 @@ public class RowNameParam
 /// <summary>
 /// Full information for row name stripping
 /// </summary>
-public class RowNameEntry
+internal sealed class RowNameEntry
 {
     /// <summary>
     /// The index of the row

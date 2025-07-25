@@ -9,3 +9,14 @@ indent_style = space
 indent_size = 4
 trim_trailing_whitespace = true
 max_line_length = 100
+
+[*.cs]
+dotnet_analyzer_diagnostic.category-Design.severity = warning
+dotnet_analyzer_diagnostic.category-Interoperability.severity = warning
+dotnet_analyzer_diagnostic.category-Maintainability.severity = warning
+dotnet_analyzer_diagnostic.category-Naming.severity = warning
+dotnet_analyzer_diagnostic.category-Performance.severity = warning
+dotnet_analyzer_diagnostic.category-Reliability.severity = warning
+dotnet_analyzer_diagnostic.category-Security.severity = warning
+dotnet_analyzer_diagnostic.category-Style.severity = warning
+dotnet_analyzer_diagnostic.category-Usage.severity = warning

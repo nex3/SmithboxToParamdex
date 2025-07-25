@@ -1,12 +1,10 @@
-using System.Text.Json;
-
-class ParamdexToSmithbox
+internal sealed class ParamdexToSmithbox
 {
     public static void Run(Data data)
     {
-        foreach (var game in data.Games())
+        foreach (Game game in data.Games())
         {
-            foreach (var param in game.Params())
+            foreach (Param param in game.Params())
             {
                 if (param.ParamdexRows.Count == 0)
                 {
@@ -17,8 +15,8 @@ class ParamdexToSmithbox
                 Queue<ParamdexRow> paramdexRows = new(param.ParamdexRows);
                 while (smithboxRows.Count > 0 && paramdexRows.Count > 0)
                 {
-                    var smithboxRow = smithboxRows.Dequeue();
-                    var paramdexRow = paramdexRows.Peek();
+                    RowNameEntry smithboxRow = smithboxRows.Dequeue();
+                    ParamdexRow paramdexRow = paramdexRows.Peek();
 
                     // Paramdex generally only includes rows with names while Smithbox includes
                     // unnamed rows as well, so if the rows mismatch we assume it's because Paramdex
@@ -31,28 +29,27 @@ class ParamdexToSmithbox
                         continue;
                     }
 
-                    var (paramdexEnName, paramdexJpName) = paramdexRow.SplitJapaneseName();
-                    var paramdexName = paramdexEnName ?? paramdexRow.Name;
+                    (string? paramdexEnName, string? _) = paramdexRow.SplitJapaneseName();
+                    string paramdexName = paramdexEnName ?? paramdexRow.Name;
 
                     if (smithboxRow.Name == "")
                     {
                         smithboxRow.Name = paramdexName;
                     }
-                    paramdexRows.Dequeue();
+                    _ = paramdexRows.Dequeue();
                 }
 
                 if (
                     paramdexRows.Count > 0
                     && (
                         param.SmithboxRows.Count == 0
-                        || paramdexRows.Peek().ID
-                            > param.SmithboxRows[param.SmithboxRows.Count - 1].ID
+                        || paramdexRows.Peek().ID > param.SmithboxRows[^1].ID
                     )
                 )
                 {
                     while (paramdexRows.Count > 0)
                     {
-                        var paramdexRow = paramdexRows.Dequeue();
+                        ParamdexRow paramdexRow = paramdexRows.Dequeue();
                         param.SmithboxRows.Add(
                             new()
                             {

@@ -1,13 +1,10 @@
-﻿using System.Collections.Generic;
-using System.CommandLine;
-using System.IO;
-using System.Text.Json;
-using System.Text.RegularExpressions;
-using System.Xml;
+﻿using System.CommandLine;
 
-var rootCommand = new RootCommand("Converts param names between Paramdex and Smithbox format.");
+#pragma warning disable IDE0028 // https://github.com/dotnet/roslyn/issues/79156
+RootCommand rootCommand = new("Converts param names between Paramdex and Smithbox format.");
+#pragma warning restore IDE0028
 
-var paramdexToSmithboxOption = new Option<bool>("--paramdex-to-smithbox")
+Option<bool> paramdexToSmithboxOption = new("--paramdex-to-smithbox")
 {
     Description =
         "Convert Paramdex names to Smithbox instead of the reverse.\n"
@@ -15,25 +12,24 @@ var paramdexToSmithboxOption = new Option<bool>("--paramdex-to-smithbox")
 };
 rootCommand.Add(paramdexToSmithboxOption);
 
-var gamesOption = new Option<List<string>>("--game")
+Option<List<string>> gamesOption = new("--game")
 {
     Description = "Only convert the given games.\n" + "May be passed multiple times.",
 };
 rootCommand.Add(gamesOption);
 
-var smithboxPath = new Argument<string>("path/to/Smithbox");
+Argument<string> smithboxPath = new("path/to/Smithbox");
 rootCommand.Add(smithboxPath);
 
-var paramdexPath = new Argument<string>("path/to/Paramdex");
+Argument<string> paramdexPath = new("path/to/Paramdex");
 rootCommand.Add(paramdexPath);
 
 rootCommand.SetAction(parsedArgs =>
 {
-    var games = parsedArgs.GetValue(gamesOption);
-    var data = new Data(
+    Data data = new(
         parsedArgs.GetValue(smithboxPath)!,
         parsedArgs.GetValue(paramdexPath)!,
-        games: games.Count > 0 ? games : null
+        games: parsedArgs.GetValue(gamesOption)
     );
 
     if (parsedArgs.GetValue(paramdexToSmithboxOption)!)

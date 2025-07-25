@@ -11,12 +11,24 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-dotnet@v4
-      with: {dotnet-version: 8.x}
+      with: {dotnet-version: 9.x}
     - run: dotnet build
 
   format:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    - uses: actions/setup-dotnet@v4
+      with: {dotnet-version: 9.x}
     - run: dotnet tool restore
-    - run: dotnet csharpier --check .
+    - run: dotnet csharpier check .
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-dotnet@v4
+        with: {dotnet-version: 9.x}
+      - run: dotnet restore
+      - uses: zyactions/dotnet-lint@v1
+

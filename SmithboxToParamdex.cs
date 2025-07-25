@@ -1,24 +1,21 @@
-using System.Collections.Generic;
-using System.IO;
-using System.Text.Json;
 using System.Xml;
 
-class SmithboxToParamdex
+internal sealed class SmithboxToParamdex
 {
-    private static void syncParamNames(Game game)
+    private static void SyncParamNames(Game game)
     {
-        foreach (var param in game.Params())
+        foreach (Param param in game.Params())
         {
             Queue<ParamdexRow> paramdexParams = new(param.ParamdexRows);
             Queue<ParamdexRow> outputParams = [];
             Queue<ParamdexRow> jpOutputParams = [];
 
-            foreach (var entry in param.SmithboxRows)
+            foreach (RowNameEntry entry in param.SmithboxRows)
             {
                 ParamdexRow? paramdexRow = paramdexParams.Count > 0 ? paramdexParams.Peek() : null;
                 if (paramdexRow?.ID == entry.ID)
                 {
-                    paramdexParams.Dequeue();
+                    _ = paramdexParams.Dequeue();
                 }
 
                 if (entry.Name != "")
@@ -41,31 +38,31 @@ class SmithboxToParamdex
                 }
             }
 
-            param.ParamdexRows = new(outputParams);
-            param.ParamdexJapaneseRows = new(jpOutputParams);
+            param.ParamdexRows = [.. outputParams];
+            param.ParamdexJapaneseRows = [.. jpOutputParams];
             param.WriteParamdex();
         }
     }
 
-    private static void changeNodeName(XmlNode node, string newName)
+    private static void ChangeNodeName(XmlNode node, string newName)
     {
-        var newNode = ((XmlDocument)node.OwnerDocument!).CreateNode(node.NodeType, newName, null);
+        XmlNode newNode = node.OwnerDocument!.CreateNode(node.NodeType, newName, null);
         newNode.InnerXml = node.InnerXml;
-        node.ParentNode!.ReplaceChild(newNode, node);
+        _ = node.ParentNode!.ReplaceChild(newNode, node);
     }
 
     public static void Run(Data data)
     {
-        foreach (var game in data.Games())
+        foreach (Game game in data.Games())
         {
-            syncParamNames(game);
+            SyncParamNames(game);
 
-            var defsDir = Path.Join(game.SmithboxPath, "Defs");
-            var tdfsDir = Path.Join(game.SmithboxPath, "Tdfs");
+            string defsDir = Path.Join(game.SmithboxPath, "Defs");
+            string tdfsDir = Path.Join(game.SmithboxPath, "Tdfs");
             foreach (
-                var file in (
+                string? file in (
                     Directory.Exists(defsDir) ? Directory.GetFiles(defsDir, "*.xml") : []
-                ).Concat((Directory.Exists(tdfsDir) ? Directory.GetFiles(tdfsDir, "*.tdf") : []))
+                ).Concat(Directory.Exists(tdfsDir) ? Directory.GetFiles(tdfsDir, "*.tdf") : [])
             )
             {
                 string? paramType = null;
@@ -81,16 +78,16 @@ class SmithboxToParamdex
 
                     if (doc.SelectSingleNode("//Unk06") is { } dataVersionNode)
                     {
-                        changeNodeName(dataVersionNode, "DataVersion");
+                        ChangeNodeName(dataVersionNode, "DataVersion");
                     }
 
                     if (doc.SelectSingleNode("//Version") is { } formatVersionNode)
                     {
-                        changeNodeName(formatVersionNode, "FormatVersion");
+                        ChangeNodeName(formatVersionNode, "FormatVersion");
                     }
                 }
 
-                var paramdexFile = Path.Join(
+                string paramdexFile = Path.Join(
                     game.ParamdexPath,
                     game.Name,
                     Path.GetFileName(Path.GetDirectoryName(file)),
@@ -109,7 +106,7 @@ class SmithboxToParamdex
                     continue;
                 }
 
-                Directory.CreateDirectory(Path.GetDirectoryName(paramdexFile)!);
+                _ = Directory.CreateDirectory(Path.GetDirectoryName(paramdexFile)!);
                 if (doc is not null)
                 {
                     File.WriteAllText(paramdexFile, doc.OuterXml);
