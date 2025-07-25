@@ -22,19 +22,15 @@ rootCommand.Add(paramdexPath);
 
 rootCommand.SetAction(parsedArgs =>
 {
+    var data = new Data(parsedArgs.GetValue(smithboxPath)!, parsedArgs.GetValue(paramdexPath)!);
+
     if (parsedArgs.GetValue(paramdexToSmithboxOption)!)
     {
-        ParamdexToSmithbox.Run(
-            parsedArgs.GetValue(paramdexPath)!,
-            parsedArgs.GetValue(smithboxPath)!
-        );
+        ParamdexToSmithbox.Run(data);
     }
     else
     {
-        SmithboxToParamdex.Run(
-            parsedArgs.GetValue(smithboxPath)!,
-            parsedArgs.GetValue(paramdexPath)!
-        );
+        SmithboxToParamdex.Run(data);
     }
 });
 

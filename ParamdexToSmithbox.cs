@@ -2,133 +2,71 @@ using System.Text.Json;
 
 class ParamdexToSmithbox
 {
-    private static JsonSerializerOptions jsonOptions = new()
+    public static void Run(Data data)
     {
-        NewLine = "\n",
-        WriteIndented = true,
-        IndentSize = 2,
-    };
-
-    public static void Run(string paramdexPath, string smithboxPath)
-    {
-        foreach (var dir in Directory.GetDirectories(paramdexPath))
+        foreach (var game in data.Games())
         {
-            var namesDir = Path.Join(dir, "Names");
-            if (!Directory.Exists(namesDir))
+            foreach (var param in game.Params())
             {
-                continue;
-            }
-
-            var gameCode = Path.GetFileName(dir);
-            var smithboxFile = Path.Join(
-                smithboxPath,
-                "src/Smithbox.Data/Assets/PARAM",
-                gameCode,
-                "Community Row Names.json"
-            );
-            if (!File.Exists(smithboxFile))
-            {
-                Console.Error.WriteLine($"Smithbox doesn't track {gameCode} param names");
-                continue;
-            }
-
-            var smithboxStore = JsonSerializer.Deserialize<RowNameStore>(
-                File.ReadAllText(smithboxFile)
-            )!;
-            Dictionary<string, List<RowNameEntry>> smithboxByName =
-                smithboxStore.Params.ToDictionary(param => param.Name, param => param.Entries);
-
-            foreach (var paramdexFile in Directory.GetFiles(namesDir, "*.txt"))
-            {
-                var paramName = Path.GetFileName(paramdexFile)[0..^4];
-                var paramdexParams = Paramdex.readFile(paramdexFile).ToList();
-                if (paramdexParams.Count == 0)
+                if (param.ParamdexRows.Count == 0)
                 {
                     continue;
                 }
 
-                if (smithboxByName.TryGetValue(paramName, out var smithboxRows))
+                Queue<RowNameEntry> smithboxRows = new(param.SmithboxRows);
+                Queue<ParamdexRow> paramdexRows = new(param.ParamdexRows);
+                while (smithboxRows.Count > 0 && paramdexRows.Count > 0)
                 {
-                    var paramdexParamsById = paramdexParams.ToLookup((pair) => pair.Item1);
-                    List<RowNameEntry> newSmithboxRows = [];
-                    for (var i = 0; i < smithboxRows.Count; i++)
+                    var smithboxRow = smithboxRows.Dequeue();
+                    var paramdexRow = paramdexRows.Peek();
+
+                    // Paramdex generally only includes rows with names while Smithbox includes
+                    // unnamed rows as well, so if the rows mismatch we assume it's because Paramdex
+                    // is just missing this row. This does mean that we can't handle cases where
+                    // Paramdex adds new rows in the middle, but that really calls for a new sync
+                    // between Smithbox and the game data itself which is out-of-scope for this
+                    // tool.
+                    if (paramdexRow.ID != smithboxRow.ID)
                     {
-                        var id = smithboxRows[i].ID;
-
-                        foreach (var (paramdexID, originalParamdexName) in paramdexParamsById[id])
-                        {
-                            var (paramdexEnName, paramdexJpName) = Utils.SplitJapaneseName(
-                                originalParamdexName
-                            );
-                            var paramdexName = paramdexEnName ?? originalParamdexName;
-
-                            var row = i < smithboxRows.Count ? smithboxRows[i] : null;
-                            var nextIndex = Math.Max(
-                                newSmithboxRows.Count == 0
-                                    ? 0
-                                    : newSmithboxRows[newSmithboxRows.Count - 1].Index + 1,
-                                row?.Index ?? 0
-                            );
-                            if (row?.ID == id)
-                            {
-                                if (row.Name == "")
-                                {
-                                    row.Name = paramdexName;
-                                }
-                                row.Index = nextIndex;
-                                newSmithboxRows.Add(row);
-                                i++;
-                            }
-                            else
-                            {
-                                newSmithboxRows.Add(
-                                    new()
-                                    {
-                                        Index = nextIndex,
-                                        ID = id,
-                                        Name = paramdexName,
-                                    }
-                                );
-                            }
-                        }
-
-                        while (i < smithboxRows.Count && smithboxRows[i].ID == id)
-                        {
-                            var row = smithboxRows[i];
-                            row.Index = Math.Max(
-                                newSmithboxRows.Count == 0
-                                    ? 0
-                                    : newSmithboxRows[newSmithboxRows.Count - 1].Index + 1,
-                                row.Index
-                            );
-                            newSmithboxRows.Add(row);
-                            i++;
-                        }
+                        continue;
                     }
+
+                    var (paramdexEnName, paramdexJpName) = paramdexRow.SplitJapaneseName();
+                    var paramdexName = paramdexEnName ?? paramdexRow.Name;
+
+                    if (smithboxRow.Name == "")
+                    {
+                        smithboxRow.Name = paramdexName;
+                    }
+                    paramdexRows.Dequeue();
                 }
-                else
+
+                if (
+                    paramdexRows.Count > 0
+                    && (
+                        param.SmithboxRows.Count == 0
+                        || paramdexRows.Peek().ID
+                            > param.SmithboxRows[param.SmithboxRows.Count - 1].ID
+                    )
+                )
                 {
-                    smithboxStore.Params.Add(
-                        new()
-                        {
-                            Name = paramName,
-                            Entries = paramdexParams
-                                .Select(
-                                    (pair, index) =>
-                                        new RowNameEntry()
-                                        {
-                                            Index = index,
-                                            ID = pair.Item1,
-                                            Name = pair.Item2,
-                                        }
-                                )
-                                .ToList(),
-                        }
-                    );
+                    while (paramdexRows.Count > 0)
+                    {
+                        var paramdexRow = paramdexRows.Dequeue();
+                        param.SmithboxRows.Add(
+                            new()
+                            {
+                                ID = paramdexRow.ID,
+                                Name = paramdexRow.Name,
+                                Index = param.SmithboxRows.Count,
+                            }
+                        );
+                    }
                 }
             }
 
-            File.WriteAllText(smithboxFile, JsonSerializer.Serialize(smithboxStore, jsonOptions));
+            game.WriteSmithbox();
+            Console.WriteLine($"Converted {game.Name}");
         }
     }
 }

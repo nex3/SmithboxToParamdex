@@ -1,5 +1,4 @@
-﻿// -------------- Row Name Store --------------
-/// <summary>
+﻿/// <summary>
 /// Full information for row name stripping
 /// </summary>
 public class RowNameStore

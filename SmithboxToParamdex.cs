@@ -5,90 +5,45 @@ using System.Xml;
 
 class SmithboxToParamdex
 {
-    private static void syncParamNames(string paramdexPath, string smithboxFile)
+    private static void syncParamNames(Game game)
     {
-        var gameCode = Path.GetFileName(Path.GetDirectoryName(smithboxFile));
-        var smithboxStore = JsonSerializer.Deserialize<RowNameStore>(
-            File.ReadAllText(smithboxFile)
-        )!;
-
-        foreach (var smithboxParams in smithboxStore.Params)
+        foreach (var param in game.Params())
         {
-            var paramdexFile = Path.Join(
-                paramdexPath,
-                gameCode,
-                "Names",
-                smithboxParams.Name + ".txt"
-            );
-            Queue<(int, string)> paramdexParams = File.Exists(paramdexFile)
-                ? new(Paramdex.readFile(paramdexFile))
-                : [];
-            Queue<(int, string)> outputParams = [];
-            Queue<(int, string)> jpOutputParams = [];
+            Queue<ParamdexRow> paramdexParams = new(param.ParamdexRows);
+            Queue<ParamdexRow> outputParams = [];
+            Queue<ParamdexRow> jpOutputParams = [];
 
-            foreach (var entry in smithboxParams.Entries)
+            foreach (var entry in param.SmithboxRows)
             {
-                int? paramdexID = null;
-                string? paramdexName = null;
-                if (paramdexParams.Count > 0)
-                {
-                    (paramdexID, paramdexName) = paramdexParams.Peek();
-                }
-                if (paramdexID == entry.ID)
+                ParamdexRow? paramdexRow = paramdexParams.Count > 0 ? paramdexParams.Peek() : null;
+                if (paramdexRow?.ID == entry.ID)
                 {
                     paramdexParams.Dequeue();
                 }
 
                 if (entry.Name != "")
                 {
-                    outputParams.Enqueue((entry.ID, entry.Name));
+                    outputParams.Enqueue(new() { ID = entry.ID, Name = entry.Name });
 
-                    if (paramdexName is not null)
+                    if (
+                        paramdexRow?.SplitJapaneseName() is (_, string jpParamdexName)
+                        && !entry.Name.Contains(jpParamdexName)
+                    )
                     {
-                        if (
-                            Utils.SplitJapaneseName(paramdexName) is (_, string jpParamdexName)
-                            && !entry.Name.Contains(jpParamdexName)
-                        )
-                        {
-                            jpOutputParams.Enqueue(((int)paramdexID!, jpParamdexName));
-                        }
+                        jpOutputParams.Enqueue(
+                            new() { ID = (int)paramdexRow?.ID!, Name = jpParamdexName }
+                        );
                     }
                 }
-                else if (
-                    paramdexID is not null
-                    && paramdexName is not null
-                    && paramdexID == entry.ID
-                )
+                else if (paramdexRow is ParamdexRow existingRow && existingRow.ID == entry.ID)
                 {
-                    outputParams.Enqueue(((int)paramdexID, paramdexName));
+                    outputParams.Enqueue(existingRow);
                 }
             }
 
-            if (outputParams.Count > 0)
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(paramdexFile)!);
-                File.WriteAllText(
-                    paramdexFile,
-                    String.Join("", outputParams.Select(tuple => $"{tuple.Item1} {tuple.Item2}\n"))
-                );
-
-                if (jpOutputParams.Count > 0)
-                {
-                    var jpParamdexFile = Path.Join(
-                        Path.GetDirectoryName(paramdexFile),
-                        "jp",
-                        Path.GetFileName(paramdexFile)
-                    );
-                    Directory.CreateDirectory(Path.GetDirectoryName(jpParamdexFile)!);
-                    File.WriteAllText(
-                        jpParamdexFile,
-                        String.Join(
-                            "",
-                            jpOutputParams.Select(tuple => $"{tuple.Item1} {tuple.Item2}\n")
-                        )
-                    );
-                }
-            }
+            param.ParamdexRows = new(outputParams);
+            param.ParamdexJapaneseRows = new(jpOutputParams);
+            param.WriteParamdex();
         }
     }
 
@@ -99,26 +54,14 @@ class SmithboxToParamdex
         node.ParentNode!.ReplaceChild(newNode, node);
     }
 
-    public static void Run(string smithboxPath, string paramdexPath)
+    public static void Run(Data data)
     {
-        foreach (
-            var dir in Directory.GetDirectories(
-                Path.Join(smithboxPath, "src/Smithbox.Data/Assets/PARAM")
-            )
-        )
+        foreach (var game in data.Games())
         {
-            var smithboxFile = Path.Join(dir, "Community Row Names.json");
-            if (!File.Exists(smithboxFile))
-            {
-                Console.Error.WriteLine($"{smithboxFile} does not exist, not copying.");
-            }
-            else
-            {
-                syncParamNames(paramdexPath, smithboxFile);
-            }
+            syncParamNames(game);
 
-            var defsDir = Path.Join(dir, "Defs");
-            var tdfsDir = Path.Join(dir, "Tdfs");
+            var defsDir = Path.Join(game.SmithboxPath, "Defs");
+            var tdfsDir = Path.Join(game.SmithboxPath, "Tdfs");
             foreach (
                 var file in (
                     Directory.Exists(defsDir) ? Directory.GetFiles(defsDir, "*.xml") : []
@@ -148,8 +91,8 @@ class SmithboxToParamdex
                 }
 
                 var paramdexFile = Path.Join(
-                    paramdexPath,
-                    Path.GetFileName(dir),
+                    game.ParamdexPath,
+                    game.Name,
                     Path.GetFileName(Path.GetDirectoryName(file)),
                     Path.GetFileName(file)
                 );
@@ -177,7 +120,7 @@ class SmithboxToParamdex
                 }
             }
 
-            Console.WriteLine(dir);
+            Console.WriteLine($"Converted {game.Name}");
         }
     }
 }
