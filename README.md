@@ -1,7 +1,8 @@
 ## Smithbox to Paramdex
 
 This repo contains a small, simple script to convert between [Smithbox]'s
-JSON-based format for parameter names and [Paramdex]'s text-based format.
+JSON-based format for parameter names and [Paramdex]'s text-based format and
+vice-versa.
 
 [Smithbox]: https://github.com/vawser/smithbox
 [Paramdex]: https://github.com/soulsmods/Paramdex
@@ -19,33 +20,29 @@ A place to share this knowledge gives us the means to build on one another's
 work and create a community base of understanding greater than what any of us
 can hold in our heads individually.
 
-Until recently, Smithbox was the *de facto* source of truth, as the all-in-one
-graphical tool for inspecting and modifying these games. However, as of 4 July
-2025, the previous maintainer has archived it and no new maintainers have
-stepped up. Since archiving renders it read-only, it's clearly no longer an
-appropriate canonical source of truth.
+Both Smithbox and Paramdex have been used, at various times by various people,
+as sources of truth for inspecting and modifying these games. With Smithbox
+recently being briefly archived due to maintainer burnout, it became clear that
+it would be valuable to ensure its data was portable. With it being un-archived,
+it became valuable in turn to take the work people had put into Paramdex and
+roll it back into the more graphical tool.
 
-Paramdex is the next best option. While not as directly connected to tooling as
-Smithbox, it's actively used by at least [one prolific modder] and has existed
-for a long time.
+So, this script exists as a means of converting back and forth for as long as
+both sources are in wide use. It's my hope that eventually the community settles
+on and users of the other migrate over, but until that point, liquidity of
+information between them is the best alternative.
 
-[one prolific modder]: https://thefifthmatt.com/
+### Options
 
-### Can we convert in reverse?
+* `--paramdex-to-smithbox`: By default this tool converts Smithbox's data into
+  Paramdex's format. This reverses the flow, and converts Paramdex's data into
+  Smithbox's format.
 
-Currently this script only supports converting _from_ Smithbox _to_ Paramdex.
-This does have the downside that any additions made solely in Paramdex can't be
-viewed from within the last released Smithbox version (which should continue to
-work indefinitely for existing FromSoft games). This makes graphical data mining
-more difficult and error-prone.
+* `--overwrite-names`: By default, if the target repository already has a name
+  for a given parameter, that name is preserved even if it differs from the
+  source. If this flag is passed, all target names are overwritten (as long as
+  the source has a name).
 
-It's possible to do a reverse conversion, but there's one substantial difficulty
-standing in the way: Smithbox's parameter name format requires knowledge of the
-indexes of each row, while Paramdex's does not. Aligning IDs with indices
-accurately requires loading the game data, which is a much more complex task
-than this package is currently capable of.
-
-Support for the reverse transformation may be added in the future, especially if
-Paramdex starts to have more substantial contributions that are missing in
-Smithbox or any forks thereof. But for now, I'm keeping this simple and doing
-the easier, higher-value translation.
+* `--game`: Takes a game code, like `ER` for _Elden Ring_ or `AC6` for _Armored
+  Core 6_. Can be passed multiple times. Only parameters for the given game(s)
+  are converted.
