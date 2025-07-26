@@ -2,7 +2,7 @@ using System.Xml;
 
 internal sealed class SmithboxToParamdex
 {
-    private static void SyncParamNames(Game game)
+    private static void SyncParamNames(Game game, bool overwriteNames = false)
     {
         foreach (Param param in game.Params())
         {
@@ -12,13 +12,20 @@ internal sealed class SmithboxToParamdex
 
             foreach (RowNameEntry entry in param.SmithboxRows)
             {
-                ParamdexRow? paramdexRow = paramdexParams.Count > 0 ? paramdexParams.Peek() : null;
-                if (paramdexRow?.ID == entry.ID)
-                {
-                    _ = paramdexParams.Dequeue();
-                }
+                ParamdexRow? paramdexRow =
+                    paramdexParams.Count > 0 && paramdexParams.Peek().ID == entry.ID
+                        ? paramdexParams.Dequeue()
+                        : null;
 
-                if (entry.Name != "")
+                if (
+                    (
+                        paramdexRow?.ID != entry.ID
+                        || overwriteNames
+                        || paramdexRow is null
+                        || paramdexRow?.Name == ""
+                    )
+                    && entry.Name != ""
+                )
                 {
                     outputParams.Enqueue(new() { ID = entry.ID, Name = entry.Name });
 
@@ -32,13 +39,13 @@ internal sealed class SmithboxToParamdex
                         );
                     }
                 }
-                else if (paramdexRow is ParamdexRow existingRow && existingRow.ID == entry.ID)
+                else if (paramdexRow is ParamdexRow existingRow)
                 {
                     outputParams.Enqueue(existingRow);
                 }
             }
 
-            param.ParamdexRows = [.. outputParams];
+            param.ParamdexRows = [.. outputParams, .. paramdexParams];
             param.ParamdexJapaneseRows = [.. jpOutputParams];
             param.WriteParamdex();
         }
@@ -51,11 +58,11 @@ internal sealed class SmithboxToParamdex
         _ = node.ParentNode!.ReplaceChild(newNode, node);
     }
 
-    public static void Run(Data data)
+    public static void Run(Data data, bool overwriteNames = false)
     {
         foreach (Game game in data.Games())
         {
-            SyncParamNames(game);
+            SyncParamNames(game, overwriteNames: overwriteNames);
 
             string defsDir = Path.Join(game.SmithboxPath, "Defs");
             string tdfsDir = Path.Join(game.SmithboxPath, "Tdfs");
@@ -89,7 +96,6 @@ internal sealed class SmithboxToParamdex
 
                 string paramdexFile = Path.Join(
                     game.ParamdexPath,
-                    game.Name,
                     Path.GetFileName(Path.GetDirectoryName(file)),
                     Path.GetFileName(file)
                 );

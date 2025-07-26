@@ -14,9 +14,15 @@ rootCommand.Add(paramdexToSmithboxOption);
 
 Option<List<string>> gamesOption = new("--game")
 {
-    Description = "Only convert the given games.\n" + "May be passed multiple times.",
+    Description = "Only convert the given games.\nMay be passed multiple times.",
 };
 rootCommand.Add(gamesOption);
+
+Option<bool> overwriteNamesOption = new("--overwrite-names")
+{
+    Description = "Overwrite existing parameter names.",
+};
+rootCommand.Add(overwriteNamesOption);
 
 Argument<string> smithboxPath = new("path/to/Smithbox");
 rootCommand.Add(smithboxPath);
@@ -34,11 +40,11 @@ rootCommand.SetAction(parsedArgs =>
 
     if (parsedArgs.GetValue(paramdexToSmithboxOption)!)
     {
-        ParamdexToSmithbox.Run(data);
+        ParamdexToSmithbox.Run(data, overwriteNames: parsedArgs.GetValue(overwriteNamesOption));
     }
     else
     {
-        SmithboxToParamdex.Run(data);
+        SmithboxToParamdex.Run(data, overwriteNames: parsedArgs.GetValue(overwriteNamesOption));
     }
 });
 

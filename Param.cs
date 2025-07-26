@@ -54,16 +54,6 @@ internal sealed class Param
     /// spill across multiple lines.
     private static IEnumerable<ParamdexRow> ReadParamdexRows(string path)
     {
-        return ReadParamdexRowsWithoutPost(path)
-            .Select(row => new ParamdexRow()
-            {
-                ID = row.ID,
-                Name = row.Name == "UNKNOWN" ? "" : row.Name,
-            });
-    }
-
-    private static IEnumerable<ParamdexRow> ReadParamdexRowsWithoutPost(string path)
-    {
         using StreamReader reader = new(path);
         int? id = null;
         string? name = null;
@@ -82,7 +72,7 @@ internal sealed class Param
                 {
                     if (id is not null && name is not null)
                     {
-                        yield return new() { ID = (int)id, Name = name };
+                        yield return new((int)id, name);
                     }
                     id = parsedId;
                     name = line[(spaceIndex + 1)..];
@@ -101,7 +91,7 @@ internal sealed class Param
 
         if (id is not null && name is not null)
         {
-            yield return new() { ID = (int)id, Name = name };
+            yield return new((int)id, name);
         }
     }
 

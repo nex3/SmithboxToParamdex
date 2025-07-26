@@ -1,6 +1,6 @@
 internal sealed class ParamdexToSmithbox
 {
-    public static void Run(Data data)
+    public static void Run(Data data, bool overwriteNames = false)
     {
         foreach (Game game in data.Games())
         {
@@ -32,7 +32,7 @@ internal sealed class ParamdexToSmithbox
                     (string? paramdexEnName, string? _) = paramdexRow.SplitJapaneseName();
                     string paramdexName = paramdexEnName ?? paramdexRow.Name;
 
-                    if (smithboxRow.Name == "")
+                    if (smithboxRow.Name == "" || (overwriteNames && paramdexName != ""))
                     {
                         smithboxRow.Name = paramdexName;
                     }
