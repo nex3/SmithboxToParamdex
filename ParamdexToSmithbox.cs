@@ -16,7 +16,8 @@ internal sealed class ParamdexToSmithbox
                 while (smithboxRows.Count > 0 && paramdexRows.Count > 0)
                 {
                     RowNameEntry smithboxRow = smithboxRows.Dequeue();
-                    ParamdexRow paramdexRow = paramdexRows.Peek();
+                    Queue<string> smithboxEntries = new(smithboxRow.Entries);
+                    smithboxRow.Entries = [];
 
                     // Paramdex generally only includes rows with names while Smithbox includes
                     // unnamed rows as well, so if the rows mismatch we assume it's because Paramdex
@@ -24,19 +25,33 @@ internal sealed class ParamdexToSmithbox
                     // Paramdex adds new rows in the middle, but that really calls for a new sync
                     // between Smithbox and the game data itself which is out-of-scope for this
                     // tool.
-                    if (paramdexRow.ID != smithboxRow.ID)
+                    while (
+                        paramdexRows.TryPeek(out ParamdexRow paramdexRow)
+                        && paramdexRow.ID == smithboxRow.ID
+                    )
                     {
-                        continue;
+                        (string? paramdexEnName, _) = paramdexRow.SplitJapaneseName();
+                        string paramdexName = paramdexEnName ?? paramdexRow.Name;
+
+                        if (
+                            smithboxEntries.TryDequeue(out string? smithboxName)
+                            && smithboxName != ""
+                            && (!overwriteNames || paramdexName == "")
+                        )
+                        {
+                            smithboxRow.Entries.Add(smithboxName);
+                        }
+                        else
+                        {
+                            smithboxRow.Entries.Add(paramdexName);
+                        }
+                        _ = paramdexRows.Dequeue();
                     }
 
-                    (string? paramdexEnName, string? _) = paramdexRow.SplitJapaneseName();
-                    string paramdexName = paramdexEnName ?? paramdexRow.Name;
-
-                    if (smithboxRow.Name == "" || (overwriteNames && paramdexName != ""))
+                    while (smithboxEntries.TryDequeue(out string? smithboxName))
                     {
-                        smithboxRow.Name = paramdexName;
+                        smithboxRow.Entries.Add(smithboxName);
                     }
-                    _ = paramdexRows.Dequeue();
                 }
 
                 if (
@@ -49,15 +64,20 @@ internal sealed class ParamdexToSmithbox
                 {
                     while (paramdexRows.Count > 0)
                     {
-                        ParamdexRow paramdexRow = paramdexRows.Dequeue();
-                        param.SmithboxRows.Add(
-                            new()
-                            {
-                                ID = paramdexRow.ID,
-                                Name = paramdexRow.Name,
-                                Index = param.SmithboxRows.Count,
-                            }
-                        );
+                        int id = paramdexRows.Peek().ID;
+                        RowNameEntry smithboxRow = new() { ID = id, Entries = [] };
+                        param.SmithboxRows.Add(smithboxRow);
+
+                        while (
+                            paramdexRows.TryPeek(out ParamdexRow paramdexRow)
+                            && paramdexRow.ID == id
+                        )
+                        {
+                            (string? paramdexEnName, _) = paramdexRow.SplitJapaneseName();
+                            string paramdexName = paramdexEnName ?? paramdexRow.Name;
+                            smithboxRow.Entries.Add(paramdexName);
+                            _ = paramdexRows.Dequeue();
+                        }
                     }
                 }
             }

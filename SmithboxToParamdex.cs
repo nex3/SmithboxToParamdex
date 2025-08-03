@@ -12,36 +12,39 @@ internal sealed class SmithboxToParamdex
 
             foreach (RowNameEntry entry in param.SmithboxRows)
             {
-                ParamdexRow? paramdexRow =
-                    paramdexParams.Count > 0 && paramdexParams.Peek().ID == entry.ID
-                        ? paramdexParams.Dequeue()
-                        : null;
-
-                if (
-                    (
-                        paramdexRow?.ID != entry.ID
-                        || overwriteNames
-                        || paramdexRow is null
-                        || paramdexRow?.Name == ""
-                    )
-                    && entry.Name != ""
-                )
+                foreach (string smithboxName in entry.Entries)
                 {
-                    outputParams.Enqueue(new() { ID = entry.ID, Name = entry.Name });
+                    ParamdexRow? paramdexRow =
+                        paramdexParams.Count > 0 && paramdexParams.Peek().ID == entry.ID
+                            ? paramdexParams.Dequeue()
+                            : null;
 
                     if (
-                        paramdexRow?.SplitJapaneseName() is (_, string jpParamdexName)
-                        && !entry.Name.Contains(jpParamdexName)
+                        (
+                            paramdexRow?.ID != entry.ID
+                            || overwriteNames
+                            || paramdexRow is null
+                            || paramdexRow?.Name == ""
+                        )
+                        && smithboxName != ""
                     )
                     {
-                        jpOutputParams.Enqueue(
-                            new() { ID = (int)paramdexRow?.ID!, Name = jpParamdexName }
-                        );
+                        outputParams.Enqueue(new() { ID = entry.ID, Name = smithboxName });
+
+                        if (
+                            paramdexRow?.SplitJapaneseName() is (_, string jpParamdexName)
+                            && !smithboxName.Contains(jpParamdexName)
+                        )
+                        {
+                            jpOutputParams.Enqueue(
+                                new() { ID = (int)paramdexRow?.ID!, Name = jpParamdexName }
+                            );
+                        }
                     }
-                }
-                else if (paramdexRow is ParamdexRow existingRow)
-                {
-                    outputParams.Enqueue(existingRow);
+                    else if (paramdexRow is ParamdexRow existingRow)
+                    {
+                        outputParams.Enqueue(existingRow);
+                    }
                 }
             }
 

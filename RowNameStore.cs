@@ -31,11 +31,6 @@ internal sealed class RowNameParam
 internal sealed class RowNameEntry
 {
     /// <summary>
-    /// The index of the row
-    /// </summary>
-    public int Index { get; set; }
-
-    /// <summary>
     /// The row ID
     /// </summary>
     public int ID { get; set; }
@@ -43,5 +38,5 @@ internal sealed class RowNameEntry
     /// <summary>
     /// The row name
     /// </summary>
-    public required string Name { get; set; }
+    public required List<string> Entries { get; set; }
 }
