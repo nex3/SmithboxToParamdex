@@ -1,17 +1,28 @@
+using System.Text.Encodings.Web;
+using System.Text.Json;
+
 internal sealed class Param
 {
+    private static readonly JsonSerializerOptions jsonOptions = new()
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        NewLine = "\n",
+        WriteIndented = true,
+        IndentSize = 2,
+    };
+
     /// The parameter name.
     public readonly string Name;
 
     /// The Smithbox parameter object.
-    private readonly RowNameParam smithboxParam;
+    private readonly string smithboxGamePath;
+
+    /// The path to the Paramdex file with row names.
+    private string SmithboxNamesPath =>
+        Path.Join(smithboxGamePath, "Community Row Names", Name + ".json");
 
     /// The Smithbox parameter data.
-    public List<RowNameEntry> SmithboxRows
-    {
-        get => smithboxParam.Entries;
-        set => smithboxParam.Entries = value;
-    }
+    public List<RowNameEntry> SmithboxRows;
 
     /// The path to the game directory containing data about this parameter in
     /// Paramdex.
@@ -35,10 +46,14 @@ internal sealed class Param
     /// The Paramdex Japanese parameter data.
     public List<ParamdexRow> ParamdexJapaneseRows;
 
-    public Param(string name, RowNameParam smithboxParam, string paramdexGamePath)
+    public Param(string name, string smithboxGamePath, string paramdexGamePath)
     {
         Name = name;
-        this.smithboxParam = smithboxParam;
+        this.smithboxGamePath = smithboxGamePath;
+        SmithboxRows = File.Exists(SmithboxNamesPath)
+            ? JsonSerializer.Deserialize<RowNameParam>(File.ReadAllText(SmithboxNamesPath))!.Entries
+            : [];
+
         this.paramdexGamePath = paramdexGamePath;
         ParamdexRows = File.Exists(ParamdexNamesPath)
             ? [.. ReadParamdexRows(ParamdexNamesPath)]
@@ -109,5 +124,18 @@ internal sealed class Param
                 File.WriteAllText(ParamdexJapaneseNamesPath, string.Join("", ParamdexJapaneseRows));
             }
         }
+    }
+
+    /// Writes Smithbox's parameter name data for this game.
+    public void WriteSmithbox()
+    {
+        _ = Directory.CreateDirectory(Path.GetDirectoryName(SmithboxNamesPath)!);
+        File.WriteAllText(
+            SmithboxNamesPath,
+            JsonSerializer.Serialize(
+                new RowNameParam() { Name = Name, Entries = SmithboxRows },
+                jsonOptions
+            )
+        );
     }
 }

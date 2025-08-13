@@ -80,9 +80,10 @@ internal sealed class ParamdexToSmithbox
                         }
                     }
                 }
+
+                param.WriteSmithbox();
             }
 
-            game.WriteSmithbox();
             Console.WriteLine($"Converted {game.Name}");
         }
     }

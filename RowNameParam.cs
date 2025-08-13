@@ -1,17 +1,6 @@
 ﻿/// <summary>
 /// Full information for row name stripping
 /// </summary>
-internal sealed class RowNameStore
-{
-    /// <summary>
-    /// The list of params
-    /// </summary>
-    public required List<RowNameParam> Params { get; set; }
-}
-
-/// <summary>
-/// Full information for row name stripping
-/// </summary>
 internal sealed class RowNameParam
 {
     /// <summary>
